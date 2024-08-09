@@ -1,161 +1,156 @@
 package ds.service3;
 
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceInfo;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-import ds.service3.Service3Grpc.Service3ImplBase;
+import ds.service3.service3Grpc.service3ImplBase;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
-public class Service3 extends Service3ImplBase {
+import io.grpc.Context;
+import io.grpc.Status;
 
-	private Map<String, Float> energyUsageData = new HashMap<>();
-	private Map<String, Float> energyDistribution = new HashMap<>();
-	private Map<String, String> energySavingSchedules = new HashMap<>();
-	private static ServiceRegistry serviceRegistry = new ServiceRegistry();
+import io.grpc.stub.MetadataUtils;
+import io.grpc.Metadata;
+
+public class service3 extends service3ImplBase {
+
+	private static final Metadata.Key<String> AUTH_TOKEN_KEY = Metadata.Key.of("auth-token",
+			Metadata.ASCII_STRING_MARSHALLER);
+	private static final String SERVICE_TYPE = "_http._tcp.local.";
 
 	public static void main(String[] args) throws InterruptedException, IOException {
-		Service3 service1 = new Service3();
+		service3 service3 = new Service3();
 
-		int port = 50053;
+		int port = 50051;
+
+		// Register service with jmDNS
+		registerService(port);
+
+		// Discover services with jmDNS
+		discoverServices();
 
 		Server server = ServerBuilder.forPort(port)
-				.addService(service1)
-				.intercept(new AuthenticationInterceptor())
+				.addService(service3)
 				.build()
 				.start();
 
-		// Register the service
-		serviceRegistry.registerService("Service3", "localhost:" + port);
-
-		System.out.println("Service-3 started, listening on " + port);
+		System.out.println("Service-1 started, listening on " + port);
 
 		server.awaitTermination();
 	}
 
-	@Override
-	public void monitorEnergyUsage(MonitorEnergyUsageRequest request,
-			StreamObserver<MonitorEnergyUsageResponse> responseObserver) {
-		Context.CancellableContext context = Context.current().withDeadlineAfter(5, TimeUnit.SECONDS,
-				Context.current().executor());
-		context.run(() -> {
-			try {
-				String areaId = request.getAreaId();
-				float currentUsage = getCurrentUsage(areaId);
-				float averageUsage = getAverageUsage(areaId);
+	private static void registerService(int port) {
+		try {
+			JmDNS jmdns = JmDNS.create();
+			ServiceInfo serviceInfo = ServiceInfo.create(SERVICE_TYPE, "service3", port, "service3");
+			jmdns.registerService(serviceInfo);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
-				MonitorEnergyUsageResponse response = MonitorEnergyUsageResponse.newBuilder()
-						.setCurrentUsage(currentUsage)
-						.setAverageUsage(averageUsage)
-						.build();
-
-				responseObserver.onNext(response);
-				responseObserver.onCompleted();
-			} catch (Exception e) {
-				responseObserver
-						.onError(Status.INTERNAL.withDescription("Internal error occurred").asRuntimeException());
+	private static void discoverServices() {
+		try {
+			JmDNS jmdns = JmDNS.create();
+			ServiceInfo[] services = jmdns.list(SERVICE_TYPE);
+			for (ServiceInfo service : services) {
+				System.out.println("Discovered service: " + service.getName() + " at " + service.getAddress() + ":"
+						+ service.getPort());
 			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	// Example method with Metadata
+	@Override
+	public void controlTrafficLight(ControlTrafficLightRequest request,
+			StreamObserver<ControlTrafficLightResponse> responseObserver) {
+		// Retrieve metadata
+		Metadata metadata = MetadataUtils.fromIncomingContext();
+		String clientId = metadata.get(Metadata.Key.of("client-id", Metadata.ASCII_STRING_MARSHALLER));
+
+		// Implement logic for controlTrafficLight RPC method
+		String intersectionId = request.getIntersectionId();
+		String lightState = request.getLightState();
+
+		// Perform traffic light control logic
+
+		ControlTrafficLightResponse response = ControlTrafficLightResponse.newBuilder()
+				.setSuccess(true)
+				.setMessage("Traffic light at intersection " + intersectionId + " set to " + lightState)
+				.build();
+
+		responseObserver.onNext(response);
+		responseObserver.onCompleted();
+	}
+
+	@Override
+	public void monitorTraffic(MonitorTrafficRequest request, StreamObserver<MonitorTrafficResponse> responseObserver) {
+		// Set a deadline for the RPC call
+		Context.current().withDeadlineAfter(5, TimeUnit.SECONDS, Context.current().executor()).run(() -> {
+			// Retrieve metadata
+			Metadata metadata = MetadataUtils.fromIncomingContext();
+			String authToken = metadata.get(AUTH_TOKEN_KEY);
+
+			// Check authentication
+			if (!isValidAuthToken(authToken)) {
+				responseObserver
+						.onError(Status.UNAUTHENTICATED.withDescription("Invalid auth token").asRuntimeException());
+				return;
+			}
+
+			// Implement logic for monitorTraffic RPC method
+			String areaId = request.getAreaId();
+
+			// Retrieve vehicle count and average speed data for the specified area
+			MonitorTrafficResponse response = MonitorTrafficResponse.newBuilder()
+					.setVehicleCount(100) // Sample vehicle count data
+					.setAverageSpeed(30.5f) // Sample average speed data
+					.build();
+
+			responseObserver.onNext(response);
+			responseObserver.onCompleted();
 		});
 	}
 
-	private float getCurrentUsage(String areaId) {
-		// Simulate fetching real-time energy usage data
-		return energyUsageData.getOrDefault(areaId, 0.0f);
-	}
-
-	private float getAverageUsage(String areaId) {
-		// Simulate calculating average usage over a period
-		return energyUsageData.getOrDefault(areaId, 0.0f) / 2; // Dummy calculation
-	}
-
 	@Override
-	public void adjustEnergyDistribution(AdjustEnergyDistributionRequest request,
-			StreamObserver<AdjustEnergyDistributionResponse> responseObserver) {
-		try {
-			String areaId = request.getAreaId();
-			float distributionPercentage = request.getDistributionPercentage();
+	public void adjustTrafficFlow(AdjustTrafficFlowRequest request,
+			StreamObserver<AdjustTrafficFlowResponse> responseObserver) {
+		// Set a deadline for the RPC call
+		Context.current().withDeadlineAfter(5, TimeUnit.SECONDS, Context.current().executor()).run(() -> {
+			// Retrieve metadata
+			Metadata metadata = MetadataUtils.fromIncomingContext();
+			String authToken = metadata.get(AUTH_TOKEN_KEY);
 
-			if (distributionPercentage < 0 || distributionPercentage > 100) {
-				AdjustEnergyDistributionResponse response = AdjustEnergyDistributionResponse.newBuilder()
-						.setSuccess(false)
-						.setMessage("Invalid distribution percentage")
-						.build();
-				responseObserver.onNext(response);
-				responseObserver.onCompleted();
+			// Check authentication
+			if (!isValidAuthToken(authToken)) {
+				responseObserver
+						.onError(Status.UNAUTHENTICATED.withDescription("Invalid auth token").asRuntimeException());
 				return;
 			}
 
-			// Simulate adjusting energy distribution
-			energyDistribution.put(areaId, distributionPercentage);
+			// Implement logic for adjustTrafficFlow RPC method
+			String areaId = request.getAreaId();
+			String timingSchedule = request.getTimingSchedule();
 
-			AdjustEnergyDistributionResponse response = AdjustEnergyDistributionResponse.newBuilder()
+			// Adjust traffic light timing schedule for optimized flow
+			AdjustTrafficFlowResponse response = AdjustTrafficFlowResponse.newBuilder()
 					.setSuccess(true)
-					.setMessage("Energy distribution adjusted successfully")
+					.setMessage("Traffic flow adjusted for area " + areaId + " with timing schedule: " + timingSchedule)
 					.build();
 
 			responseObserver.onNext(response);
 			responseObserver.onCompleted();
-		} catch (Exception e) {
-			responseObserver.onError(Status.INTERNAL.withDescription("Internal error occurred").asRuntimeException());
-		}
+		});
 	}
 
-	@Override
-	public void scheduleEnergySaving(ScheduleEnergySavingRequest request,
-			StreamObserver<ScheduleEnergySavingResponse> responseObserver) {
-		try {
-			String areaId = request.getAreaId();
-			String schedule = request.getSchedule();
-
-			if (!isValidSchedule(schedule)) {
-				ScheduleEnergySavingResponse response = ScheduleEnergySavingResponse.newBuilder()
-						.setSuccess(false)
-						.setMessage("Invalid schedule format")
-						.build();
-				responseObserver.onNext(response);
-				responseObserver.onCompleted();
-				return;
-			}
-
-			// Simulate scheduling energy-saving measures
-			energySavingSchedules.put(areaId, schedule);
-
-			ScheduleEnergySavingResponse response = ScheduleEnergySavingResponse.newBuilder()
-					.setSuccess(true)
-					.setMessage("Energy-saving measures scheduled successfully")
-					.build();
-
-			responseObserver.onNext(response);
-			responseObserver.onCompleted();
-		} catch (Exception e) {
-			responseObserver.onError(Status.INTERNAL.withDescription("Internal error occurred").asRuntimeException());
-		}
-	}
-
-	private boolean isValidSchedule(String schedule) {
-		// Simulate schedule validation
-		return schedule.matches("\\d{2}:\\d{2}-\\d{2}:\\d{2}"); // Dummy validation for HH:MM-HH:MM format
-	}
-
-	// Method to discover a service
-	public static String discoverService(String serviceName) {
-		return serviceRegistry.discoverService(serviceName);
-	}
-
-	// Authentication Interceptor
-	static class AuthenticationInterceptor implements ServerInterceptor {
-		@Override
-		public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(ServerCall<ReqT, RespT> call, Metadata headers,
-				ServerCallHandler<ReqT, RespT> next) {
-			String authToken = headers.get(Key.of("Authorization", Metadata.ASCII_STRING_MARSHALLER));
-			if (authToken == null || !authToken.equals("valid-token")) {
-				call.close(Status.UNAUTHENTICATED.withDescription("Invalid token"), headers);
-				return new ServerCall.Listener<ReqT>() {
-				};
-			}
-			return next.startCall(call, headers);
-		}
+	private boolean isValidAuthToken(String authToken) {
+		// Implement your authentication logic here
+		return "valid-token".equals(authToken);
 	}
 }
