@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package ds.service2;
+
+option java_multiple_files = true;
+option java_package = "ds.service2";
+option java_outer_classname = "Service2Proto";
+
+// Service for optimizing waste collection and management
+service SmartWasteManagementService {
+    // Simple RPC
+    rpc CheckBinStatus(CheckBinStatusRequest) returns (CheckBinStatusResponse) {}
+
+    // Server-Side Streaming RPC
+    rpc StreamBinStatuses(StreamBinStatusesRequest) returns (stream StreamBinStatusesResponse) {}
+
+    // Client-Side Streaming RPC
+    rpc ScheduleMultipleCollections(stream ScheduleCollectionRequest) returns (ScheduleCollectionResponse) {}
+
+    // Bidirectional Streaming RPC
+    rpc OptimizeCollectionRoute(stream OptimizeCollectionRouteRequest) returns (stream OptimizeCollectionRouteResponse) {}
+}
+
+// Messages for CheckBinStatus
+message CheckBinStatusRequest {
+    string bin_id = 1;
+}
+
+message CheckBinStatusResponse {
+    bool is_full = 1;
+    int32 fill_level = 2;
+    string message = 3;
+}
+
+// Messages for StreamBinStatuses
+message StreamBinStatusesRequest {
+    string area_id = 1;
+}
+
+message StreamBinStatusesResponse {
+    string bin_id = 1;
+    bool is_full = 2;
+    int32 fill_level = 3;
+}
+
+// Messages for ScheduleCollection
+message ScheduleCollectionRequest {
+    string area_id = 1;
+    string schedule = 2;
+}
+
+message ScheduleCollectionResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// Messages for OptimizeCollectionRoute
+message OptimizeCollectionRouteRequest {
+    string area_id = 1;
+}
+
+message OptimizeCollectionRouteResponse {
+    bool success = 1;
+    string optimized_route = 2;
+}

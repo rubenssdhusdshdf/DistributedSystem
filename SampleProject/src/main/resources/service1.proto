@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package ds.service1;
+
+option java_multiple_files = true;
+option java_package = "ds.service1";
+option java_outer_classname = "Service1Proto";
+
+// Service for controlling traffic lights and monitoring traffic
+service Service1 {
+    // Simple RPC
+    rpc ControlTrafficLight(ControlTrafficLightRequest) returns (ControlTrafficLightResponse) {}
+
+    // Server-Side Streaming RPC
+    rpc MonitorTraffic(MonitorTrafficRequest) returns (stream MonitorTrafficResponse) {}
+
+    // Client-Side Streaming RPC
+    rpc AdjustTrafficFlow(stream AdjustTrafficFlowRequest) returns (AdjustTrafficFlowResponse) {}
+
+    // Bidirectional Streaming RPC
+    rpc TrafficUpdates(stream TrafficUpdateRequest) returns (stream TrafficUpdateResponse) {}
+}
+
+// Messages for ControlTrafficLight
+message ControlTrafficLightRequest {
+    string intersection_id = 1;
+    string light_state = 2;
+}
+
+message ControlTrafficLightResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// Messages for MonitorTraffic
+message MonitorTrafficRequest {
+    string area_id = 1;
+}
+
+message MonitorTrafficResponse {
+    int32 vehicle_count = 1;
+    float average_speed = 2;
+}
+
+// Messages for AdjustTrafficFlow
+message AdjustTrafficFlowRequest {
+    string area_id = 1;
+    string timing_schedule = 2;
+}
+
+message AdjustTrafficFlowResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// Messages for TrafficUpdates
+message TrafficUpdateRequest {
+    string update_info = 1;
+}
+
+message TrafficUpdateResponse {
+    string update_status = 1;
+}

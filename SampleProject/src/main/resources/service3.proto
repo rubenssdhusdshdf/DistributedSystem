@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package ds.service3;
+
+option java_multiple_files = true;
+option java_package = "ds.service3";
+option java_outer_classname = "Service3Proto";
+
+// Service for managing energy usage and distribution
+service Service3 {
+    // Simple RPC
+    rpc MonitorEnergyUsage(MonitorEnergyUsageRequest) returns (MonitorEnergyUsageResponse) {}
+
+    // Server-Side Streaming RPC
+    rpc StreamEnergyUsage(StreamEnergyUsageRequest) returns (stream StreamEnergyUsageResponse) {}
+
+    // Client-Side Streaming RPC
+    rpc AdjustEnergyDistribution(stream AdjustEnergyDistributionRequest) returns (AdjustEnergyDistributionResponse) {}
+
+    // Bidirectional Streaming RPC
+    rpc EnergySavingUpdates(stream EnergySavingUpdateRequest) returns (stream EnergySavingUpdateResponse) {}
+}
+
+// Messages for MonitorEnergyUsage
+message MonitorEnergyUsageRequest {
+    string area_id = 1;
+}
+
+message MonitorEnergyUsageResponse {
+    float current_usage = 1;
+    float average_usage = 2;
+}
+
+// Messages for StreamEnergyUsage
+message StreamEnergyUsageRequest {
+    string area_id = 1;
+}
+
+message StreamEnergyUsageResponse {
+    float current_usage = 1;
+    float average_usage = 2;
+}
+
+// Messages for AdjustEnergyDistribution
+message AdjustEnergyDistributionRequest {
+    string area_id = 1;
+    float distribution_percentage = 2;
+}
+
+message AdjustEnergyDistributionResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// Messages for EnergySavingUpdates
+message EnergySavingUpdateRequest {
+    string update_info = 1;
+}
+
+message EnergySavingUpdateResponse {
+    string update_status = 1;
+}
